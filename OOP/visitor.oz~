@@ -1,0 +1,121 @@
+local Root File1 Folder1 File2 Visitor FindVisitor FileNode FileVisitor FileFinderVisitor DeleteVisitor in
+class FileNode
+   attr files name
+   meth init(Name)
+      name := Name
+      files := nil
+   end
+   meth addFile(File)
+      local S in 
+         {AdjoinList @files [{File getName($)}#File] S}
+	 files := S
+      end
+   end
+   meth ls(Visitor)
+     {Visitor accept(self)}
+   end
+   meth find(Visitor Path $)
+     {Visitor acceptFind(self Path $)}
+   end
+   meth rm(Visitor Path)
+     {Visitor acceptRm(self Path)}
+   end
+   meth getFiles($)
+     @files
+   end
+   meth getChildrenNode(Name $)
+      local X in
+	 {CondSelect @files Name nil X}
+	 X
+      end
+   end
+   meth getName($)
+     @name
+   end
+
+   meth deleteChildNode(Name)
+      files := {Record.subtract @files Name}
+   end
+end
+
+class FileFinderVisitor
+   attr name
+   meth init()
+      name := "FinderVisitor"
+   end
+
+   meth basePath(Path $)
+      local DirName BasePath in
+	 {List.takeDrop Path {{List.length Path} - 1} DirName BasePath}
+	 DirName#BasePath
+      end
+   end
+
+   meth acceptFind(Node Path $)
+      {self find(Node Path $)}
+   end
+   
+   meth find(Node Path $)
+      case Path of nil then Node
+      [] H|T then
+	 case H == {Node getName($)} of false then nil
+	 [] true then
+	    case T of nil then Node
+	    [] Next|Rest then 
+	       case {Node getChildrenNode(Next $)} of nil then nil
+	       [] N then {self find(N Rest $)}
+	       end
+	    end
+	 end
+      end
+   end
+   
+end
+
+class DeleteVisitor from FileFinderVisitor
+   meth acceptRm(Node Path)
+      local DirName BaseName FindNode in
+	 DirName#BaseName = {self basePath(Path $)}
+	 case {self find(Node DirName $)} of nil then {Browse nil}
+	 [] N then {N deleteChildNode(BaseName)}
+	 end
+      end
+   end
+end
+
+class FileVisitor
+   attr name
+   meth init()
+      name := "Visitor"
+   end
+   meth accept(FileNode)
+      {self traverse(FileNode {Record.toListInd {FileNode getFiles($)}} nil)}
+   end
+   meth traverse(Node NodeFiles Pending)
+         {Show {Node getName($)}}
+	 case NodeFiles of nil then
+	    case Pending of nil then {Show 'END'}
+	    [] N#H|T then {self traverse(H {Record.toListInd {H getFiles($)}} T)}
+	    end
+	 [] N#H|nil then {self traverse(H {Record.toListInd {H getFiles($)}} Pending)}
+	 [] N#H|T then 
+	    case Pending of nil then {self traverse(H {Record.toListInd {H getFiles($)}} T)}
+	    [] _ then {self traverse(H {Record.toListInd {H getFiles($)}} T|Pending)}
+	    end
+	 end
+   end
+end
+   Root = {New FileNode init('/')}
+   File1 = {New FileNode init('file1')}
+   {Root addFile(File1)}
+   Folder1 = {New FileNode init('folder1')}
+   File2 = {New FileNode init('file2')}
+   {Folder1 addFile(File2)}
+   {Root addFile(Folder1)}
+   Visitor = {New FileVisitor init()}
+   FindVisitor = {New FileFinderVisitor init()}
+   {Root ls(Visitor)}
+   {Show {{Root find(FindVisitor ['/' 'file1'] $)} getName($)}}
+   
+end
+

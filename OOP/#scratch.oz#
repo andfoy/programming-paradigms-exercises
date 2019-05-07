@@ -1,0 +1,18 @@
+class Counter
+   attr val
+   meth init(Value)
+      val:=Value
+   end
+   meth browse
+      {Browse @val}
+   end
+   meth inc(Value)
+      val :=@val+Value
+   end
+end
+
+local C in
+   C = {New Counter init(0)}
+   {C inc(6)}
+   {C browse}
+end
